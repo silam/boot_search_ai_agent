@@ -28,17 +28,23 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = 40_000_000  # decompression-bomb protection
 
 INJECTION_PATTERNS = [
-    (r"ignore (all |any )?(the )?(previous|prior|above|earlier) (instructions|prompts?|rules)", 0.9),
-    (r"disregard (all |the )?(previous|prior|above|system)", 0.9),
+    (r"ignore (all |any )?(the )?(previous|prior|above|earlier) (instructions|prompts?|rules)", 0.9), # common prompt injection phrases
+    (r"disregard (all |the )?(previous|prior|above|system)", 0.9), # common prompt injection phrases
     (r"(reveal|print|show|repeat|output) (me )?(your|the) (system|hidden|initial) (prompt|instructions)", 0.9),
-    (r"you are now|act as (an? )?(unfiltered|jailbroken|dan)|developer mode|do anything now", 0.8),
-    (r"</?(system|assistant|instructions?)>", 0.7),
-    (r"\b(jailbreak|prompt injection)\b", 0.5),
-    (r"(api[_ ]?key|password|secret|credentials)", 0.4),
-    (r"(rm -rf|drop table|;--|<script)", 0.6),
+    (r"you are now|act as (an? )?(unfiltered|jailbroken|dan)|developer mode|do anything now", 0.8), # common jailbreak phrases
+    (r"</?(system|assistant|instructions?)>", 0.7), # HTML-like system/assistant tags
+    (r"\b(jailbreak|prompt injection)\b", 0.5), # common prompt injection terms
+    (r"(api[_ ]?key|password|secret|credentials)", 0.4), # sensitive information patterns
+    (r"(rm -rf|drop table|;--|<script)", 0.6), # common destructive commands or XSS patterns
 ]
 BLOCK_THRESHOLD = 0.8
 
+
+# PII patterns for redaction
+# Credit card pattern is separate because it requires Luhn check
+# Luhn check ensures the card number is valid before redaction
+# Patterns for personally identifiable information (PII) and sensitive data
+# Email, SSN, and phone number patterns are included in PII_PATTERNS
 PII_PATTERNS = {
     "EMAIL": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
     "SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),

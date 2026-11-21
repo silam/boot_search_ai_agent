@@ -106,24 +106,39 @@ class BootSearchAgent:
         self.graph = self._build()
 
     # ================================================================ nodes
+    # Guard input node: validate and sanitize user input before proceeding
     def guard_input(self, state: AgentState) -> AgentState:
         t0 = time.perf_counter()
         check = check_query(state.get("query", ""), self.settings.max_query_chars)
+        
+        # If the input check fails, block the request and provide a safe response
         if not check.allowed:
             return {"blocked": True, "safe_query": check.text, "results": [],
                     "answer": "Sorry, I can only help with finding boots. Please describe what you're looking for.",
                     "trace": _trace(state, "guard_input", t0, allowed=False, risk=check.risk_score, reasons=check.reasons)}
+        
+        # If the query is empty and there are no images, block the request
         if not check.text and not state.get("images"):
             return {"blocked": True, "safe_query": "", "results": [],
                     "answer": "Type a description or upload a boot photo to start searching.",
                     "trace": _trace(state, "guard_input", t0, allowed=False, reasons=["empty request"])}
+        # If the input passes all checks, allow the request to proceed
         return {"blocked": False, "safe_query": check.text,
                 "trace": _trace(state, "guard_input", t0, allowed=True, risk=check.risk_score, pii_redacted=check.pii_found)}
 
+    # ================================================================ understanding
+    # Understand node: parse and interpret the user's query to determine search intent and filters
     def understand(self, state: AgentState) -> AgentState:
         t0 = time.perf_counter()
+
+        # Extract relevant information from the state for query understanding
         query, images, mode = state["safe_query"], state.get("images") or [], state.get("mode", "auto")
+        
+        
+        # Initialize usage tracking for the LLM
         usage = state.get("usage") or LLMUsage()
+
+        # Get the list of available tools for the agent to use
         available = self.engine.available_tools()
 
         parsed = parse_query(query) if query else {"search_text": "", "filters": Filters(), "intent": "visual",
@@ -181,6 +196,13 @@ class BootSearchAgent:
                             weights=weights, filters=filters.model_dump(exclude_none=True),
                             search_text=parsed["search_text"]),
         }
+
+
+
+
+    # ================================================================ retrieval
+    # Retrieve node: perform the actual search using the interpreted query and filters
+    # Reflect node: if the search results are unsatisfactory, relax filters and retry
 
     def retrieve(self, state: AgentState) -> AgentState:
         t0 = time.perf_counter()

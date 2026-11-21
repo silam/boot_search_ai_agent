@@ -45,26 +45,34 @@ VISUAL_WORDS = {"look", "looks", "looking like", "color", "colour", "style", "ph
 def _contains(text: str, phrase: str) -> bool:
     return re.search(rf"\b{re.escape(phrase)}\b", text) is not None
 
-
+# Parse the user's query to extract search text, filters, and intent
+# Returns a dictionary containing the interpreted search text, filters, and intent, along with
+# whether clarification is needed and a clarifying question if applicable.
 def parse_query(query: str) -> dict:
     """Returns {"search_text", "filters": Filters, "intent", "needs_clarification", "clarifying_question"}."""
     q = query.lower().strip()
     f = Filters()
 
+    # Determine the category of the boot based on known synonyms
     for cat, words in CATEGORY_SYNONYMS.items():
-        if any(_contains(q, w) for w in words):
+        # Check if any of the synonyms for this category are present in the query
+        if any(_contains(q, w) for w in words): 
             f.category = cat
             break
+
+    # Determine if the query contains any color information
     for color, words in COLORS.items():
         if any(_contains(q, w) for w in words):
             f.color = color
             break
 
+    # Determine if the query mentions waterproofing
     if re.search(r"\b(not|no|non)[- ]waterproof\b", q):
         f.waterproof = False
     elif re.search(r"\bwaterproof\b|keep (my )?feet dry|dry feet", q):
         f.waterproof = True
 
+    # Determine if the query mentions safety toe requirements
     if re.search(r"\b(no|without|soft)[- ](steel|safety|composite)?[- ]?toe\b", q):
         f.safety_toe = "none"
     elif re.search(r"\bsteel[- ]toe", q):
@@ -73,6 +81,7 @@ def parse_query(query: str) -> dict:
         f.safety_toe = "composite"
     elif re.search(r"\bsafety[- ]toe|safety boots?\b", q):
         f.safety_toe = "any"
+
 
     if m := PRICE_MAX.search(q):
         f.max_price = float(m.group(1))
@@ -84,6 +93,7 @@ def parse_query(query: str) -> dict:
         if phrase in q:
             expanded += " " + extra
 
+    # Expand the query with additional phrases for better search coverage
     if SKU.search(q) or (q.startswith('"') and q.endswith('"')):
         intent = "keyword_lookup"
     elif any(w in q for w in VISUAL_WORDS):
@@ -91,7 +101,10 @@ def parse_query(query: str) -> dict:
     else:
         intent = "describe"
 
+
     words = re.findall(r"[a-z]+", q)
+
+    # Determine if the query is vague and requires clarification
     vague = len([w for w in words if w not in {"boot", "boots", "a", "some", "the", "pair", "of", "show", "me"}]) == 0
     return {
         "search_text": expanded,
