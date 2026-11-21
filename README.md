@@ -23,7 +23,7 @@ checked for hallucinations before it reaches the user.
 ## Quickstart (2 minutes, no API keys, no Docker)
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/scripts/activate
 make install                      # pip install -r requirements/dev.txt
 make test                         # 47 tests incl. the text and image quality gates
 make api                          # terminal 1 → http://localhost:8000/docs
