@@ -5,6 +5,8 @@ by photo, or by **photo + description together**. A LangGraph agent decides whic
 extracts filters, fuses the results, retries when nothing matches, and writes a grounded answer that is
 checked for hallucinations before it reaches the user.
 
+### Demo: http://ec2-100-28-223-145.compute-1.amazonaws.com:8501
+
 ![Streamlit UI](docs/screenshot.png)
 
 | | |
