@@ -19,11 +19,15 @@ from typing import Any
 
 
 class BaseLoader(ABC):
-    @abstractmethod
+    @abstractmethod   # Must be implemented by all subclasses to load product records.
     def load(self) -> list[dict[str, Any]]:
         ...
 
-
+# Base class for all catalog loaders. Defines the interface that all loaders must implement.
+# Parameters:
+# - path: The path to the JSON file.
+# Returns:
+# - A list of product records retrieved from the JSON file.
 class JsonCatalogLoader(BaseLoader):
     """Loads a JSON array of product records."""
 
@@ -36,7 +40,11 @@ class JsonCatalogLoader(BaseLoader):
             raise ValueError(f"{self.path} must contain a JSON array")
         return data
 
-
+# Loads products from a CSV file.
+# Parameters:
+# - path: The path to the CSV file.
+# Returns:
+# - A list of product records retrieved from the CSV file.
 class CsvCatalogLoader(BaseLoader):
     """Loads a CSV export (e.g. from a PIM or a spreadsheet). List fields use '|' separators."""
 
@@ -55,7 +63,13 @@ class CsvCatalogLoader(BaseLoader):
                 rows.append(row)
         return rows
 
-
+# Loads products from an HTTP REST API.
+# Parameters:
+# - url: The base URL of the REST API.
+# - headers: Optional HTTP headers to include in requests.
+# - max_pages: Maximum number of pages to fetch.
+# Returns:
+# - A list of product records retrieved from the API.
 class HttpCatalogLoader(BaseLoader):
     """Loads products from a paginated REST API (Data Collection & APIs).
 
@@ -77,6 +91,11 @@ class HttpCatalogLoader(BaseLoader):
             url, pages = body.get("next"), pages + 1
         return items
 
+# Factory function to choose the appropriate loader based on the source string.
+# Parameters:
+# - path_or_url: The path to a local file or a URL.
+# Returns:
+# - An instance of the appropriate loader subclass (JsonCatalogLoader, CsvCatalogLoader, or HttpCatalogLoader).
 
 def loader_for(path_or_url: str | Path) -> BaseLoader:
     """Factory: choose a loader from the source string."""

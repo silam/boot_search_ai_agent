@@ -27,16 +27,29 @@ from pydantic import ValidationError
 
 from app.core.models import Boot
 
-_TAG = re.compile(r"<[^>]+>")
-_WS = re.compile(r"\s+")
+_TAG = re.compile(r"<[^>]+>") # Matches HTML tags for removal.
+_WS = re.compile(r"\s+") # Matches one or more whitespace characters for collapsing.
 
-
+# Clean and normalise text fields for ingestion.
+# Parameters:
+# - text: The raw text to be cleaned.
+# Returns:
+# - A string containing the cleaned and normalised text.
 def clean_text(text: str | None) -> str:
     if not text:
         return ""
+    # Strip HTML, normalize unicode, collapse whitespace, and fix casing.
+    # Unescape HTML entities, remove HTML tags, normalize unicode, and collapse whitespace.
     text = html.unescape(text)
+
+    # Remove HTML tags and normalize unicode.
     text = _TAG.sub(" ", text)
+
+    # Normalize unicode and collapse whitespace.
+    
     text = unicodedata.normalize("NFKC", text)
+
+    # Collapse whitespace.
     text = _WS.sub(" ", text).strip()
     # Fix SHOUTING descriptions (common in supplier feeds) -> sentence case
     letters = [c for c in text if c.isalpha()]
@@ -45,6 +58,11 @@ def clean_text(text: str | None) -> str:
     return text
 
 
+# Convert various representations of boolean values to a Python bool.
+# Parameters:
+# - v: The value to be converted.
+# Returns:
+# - A boolean representing the interpreted value.
 def to_bool(v: Any) -> bool:
     if isinstance(v, bool):
         return v
@@ -58,6 +76,11 @@ def to_price(v: Any) -> float | None:
         return None
 
 
+# Extract the view name from an image file name.
+# Parameters:
+# - path: The path to the image file.
+# Returns:
+# - A string representing the view, or "unknown" if it cannot be determined.
 _VIEW_FROM_NAME = re.compile(r"^\d+[_-](.+)$")
 
 
@@ -103,6 +126,14 @@ def normalise_record(raw: dict[str, Any]) -> dict[str, Any]:
     rec.pop("image", None)
     return rec
 
+# Clean and normalise a list of raw boot records for ingestion.
+# Parameters:
+# - raw_records: A list of dictionaries representing raw boot data.
+# - image_root: Optional path to the root directory containing boot images.
+# Returns:
+# - A tuple containing:
+#   - A list of Boot objects representing the cleaned and validated boots.
+#   - A list of dictionaries representing issues encountered during cleaning, with keys "id", "kind", and "reason". 
 
 def clean_catalog(raw_records: list[dict[str, Any]], image_root: Path | None = None
                   ) -> tuple[list[Boot], list[dict[str, str]]]:

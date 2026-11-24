@@ -43,53 +43,11 @@ def recursive_split(
     )
     return splitters.split_text(text.strip())
 
-# Recursive split using custom logic without external dependencies
-# This function splits text into chunks of a specified size with a specified overlap,
-# using a list of separators to determine where to split. It falls back to a hard cut
-# if no suitable separator is found.
-# the function splits on paragraphs, lines, sentences, punctuation, and spaces, 
-# then applies overlap. 
-# LangChain’s splitter supports that approach, 
-# but its merge and overlap behavior differ—so chunk text, counts, and boundaries may change. 
-# In particular, include "" as the final separator to retain the current hard-cut fallback for text 
-# with no matching separator.
 
-def recursive_split(text: str, chunk_size: int, overlap: int, separators: list[str] | None = None) -> list[str]:
-    separators = SEPARATORS if separators is None else separators
-    text = text.strip()
-    if len(text) <= chunk_size:
-        return [text] if text else []
-
-    # Pick the coarsest separator that actually occurs in the text
-    sep = next((s for s in separators if s in text), "")
-    if not sep:  # no separator left: hard cut
-        step = max(1, chunk_size - overlap)
-        return [text[i:i + chunk_size] for i in range(0, len(text), step)]
-
-    pieces = [p + (sep if sep.strip() else " ") for p in text.split(sep)]
-    chunks: list[str] = []
-    current = ""
-    for piece in pieces:
-        if len(piece) > chunk_size:  # a single piece is too big -> recurse with finer separators
-            if current:
-                chunks.append(current.strip())
-                current = ""
-            finer = separators[separators.index(sep) + 1:]
-            chunks.extend(recursive_split(piece, chunk_size, overlap, finer))
-            continue
-        if len(current) + len(piece) <= chunk_size:
-            current += piece
-        else:
-            chunks.append(current.strip())
-            tail = current[-overlap:] if overlap else ""
-            # start the overlap at a word boundary
-            tail = tail[tail.find(" ") + 1:] if " " in tail else tail
-            current = tail + piece
-    if current.strip():
-        chunks.append(current.strip())
-    return [c for c in chunks if c]
-
-
+# Profile text into a natural language sentence for embedding and BM25 indexing.
+# This function takes a Boot object and converts its structured attributes into a single descriptive sentence.
+# Returns:
+# - A string containing the natural language description of the boot.
 def profile_text(boot: Boot) -> str:
     """Turn structured attributes into a sentence. Embedding models and BM25 both
     benefit from seeing attributes as natural language."""
