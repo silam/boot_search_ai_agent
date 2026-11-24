@@ -141,11 +141,13 @@ class BootSearchAgent:
         # Get the list of available tools for the agent to use
         available = self.engine.available_tools()
 
+
         parsed = parse_query(query) if query else {"search_text": "", "filters": Filters(), "intent": "visual",
                                                    "needs_clarification": False, "clarifying_question": None}
         understood_by = "rules"
         # Only spend LLM tokens when the agent is choosing the strategy (auto mode) and there is text
         if mode == "auto" and query and self.llm.available:
+            # Use the LLM to further interpret the query and potentially refine the parsed result
             data = self.llm.complete_json(QUERY_UNDERSTANDING_SYSTEM, f"<query>{query}</query>", usage)
             if data:
                 try:

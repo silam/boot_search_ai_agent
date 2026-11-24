@@ -101,7 +101,7 @@ def parse_query(query: str) -> dict:
     else:
         intent = "describe"
 
-
+    # Tokenize the query into individual words for further analysis
     words = re.findall(r"[a-z]+", q)
 
     # Determine if the query is vague and requires clarification

@@ -24,9 +24,35 @@ eval harness (app/evaluation), not guess.
 from __future__ import annotations
 
 from app.core.models import Boot, Chunk
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 SEPARATORS = ["\n\n", "\n", ". ", "; ", ", ", " "]
 
+def recursive_split(
+    text: str,
+    chunk_size: int,
+    overlap: int,
+    separators: list[str] | None = None,
+) -> list[str]:
+    splitters = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=overlap,
+        separators=[*(SEPARATORS if separators is None else separators), ""],
+        length_function=len,
+        keep_separator=True,
+    )
+    return splitters.split_text(text.strip())
+
+# Recursive split using custom logic without external dependencies
+# This function splits text into chunks of a specified size with a specified overlap,
+# using a list of separators to determine where to split. It falls back to a hard cut
+# if no suitable separator is found.
+# the function splits on paragraphs, lines, sentences, punctuation, and spaces, 
+# then applies overlap. 
+# LangChain’s splitter supports that approach, 
+# but its merge and overlap behavior differ—so chunk text, counts, and boundaries may change. 
+# In particular, include "" as the final separator to retain the current hard-cut fallback for text 
+# with no matching separator.
 
 def recursive_split(text: str, chunk_size: int, overlap: int, separators: list[str] | None = None) -> list[str]:
     separators = SEPARATORS if separators is None else separators
@@ -79,7 +105,14 @@ def profile_text(boot: Boot) -> str:
     ]
     return ". ".join(parts)
 
-
+# Chunk a boot into smaller pieces for indexing or processing
+# Returns a list of Chunk objects representing the boot's profile, description, and reviews split into manageable pieces.
+# Parameters:
+# - boot: The Boot object to be chunked.
+# - chunk_size: The maximum size of each chunk.
+# - overlap: The number of characters to overlap between consecutive chunks.
+# Returns:
+# - A list of Chunk objects containing the split text of the boot's profile, description, and reviews.
 def chunk_boot(boot: Boot, chunk_size: int = 320, overlap: int = 60) -> list[Chunk]:
     chunks: list[Chunk] = []
     sections = {
@@ -89,5 +122,8 @@ def chunk_boot(boot: Boot, chunk_size: int = 320, overlap: int = 60) -> list[Chu
     }
     for section, text in sections.items():
         for i, piece in enumerate(recursive_split(text, chunk_size, overlap)):
+            # Create a Chunk object for each piece of text and add it to the list of chunks.
+            # The chunk_id is constructed using the boot's ID, the section name, and the index of the piece.
+            # The text of the chunk is the piece obtained from recursive_split.
             chunks.append(Chunk(chunk_id=f"{boot.id}:{section}:{i}", boot_id=boot.id, section=section, text=piece))
     return chunks

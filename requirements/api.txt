@@ -13,3 +13,4 @@ redis==8.1.0
 prometheus-client==0.26.0
 sqlalchemy==2.1.4
 requests==2.34.2
+langchain_text_splitters
