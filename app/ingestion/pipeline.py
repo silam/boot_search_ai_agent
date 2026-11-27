@@ -57,38 +57,23 @@ def _images_fingerprint(boots: list[Boot], raw_dir: Path) -> str:
             h.update(f.read_bytes() if f.is_file() else b"missing")
     return h.hexdigest()
 
-
+# Helper function to compute the SHA-256 fingerprint of all images associated with the boots.
+# This ensures that any change in the image files will be detected and trigger re-embedding.
+# Parameters:
+# - boots: List of Boot objects containing image paths.
+# - raw_dir: Directory where the raw image files are stored.
+# Returns:
+# - A SHA-256 hash representing the combined fingerprint of all images.
 def transform(settings: Settings, source: str | Path | None = None) -> tuple[list[Boot], list[Chunk]]:
     """Extract + Transform, and persist processed artifacts. No embeddings needed."""
     source = source or settings.raw_dir / "catalog.json"
     t0 = time.perf_counter()
     raw = loader_for(source).load()
     is_local = not str(source).startswith(("http://", "https://"))
+    
     boots, rejected = clean_catalog(raw, image_root=settings.raw_dir if is_local else None)
     chunks = [c for b in boots for c in chunk_boot(b, settings.chunk_size, settings.chunk_overlap)]
 
-    out = settings.processed_dir
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "boots.jsonl").write_text("\n".join(b.model_dump_json() for b in boots) + "\n")
-    (out / "chunks.jsonl").write_text("\n".join(c.model_dump_json() for c in chunks) + "\n")
-    (out / "rejected.json").write_text(json.dumps(rejected, indent=2))
-    (out / "manifest.json").write_text(json.dumps({
-        "pipeline_version": PIPELINE_VERSION,
-        "source": str(source),
-        "source_sha256": _sha256(Path(source)) if not str(source).startswith("http") else None,
-        "raw_records": len(raw),
-        "clean_boots": len(boots),
-        "rejected_records": sum(r["kind"] == "record" for r in rejected),
-        "image_issues": sum(r["kind"] == "image" for r in rejected),
-        "images": sum(len(b.images) for b in boots),
-        "images_per_boot": {"min": min((len(b.images) for b in boots), default=0),
-                            "max": max((len(b.images) for b in boots), default=0)},
-        "images_sha256": _images_fingerprint(boots, settings.raw_dir),
-        "chunks": len(chunks),
-        "chunk_size": settings.chunk_size,
-        "chunk_overlap": settings.chunk_overlap,
-        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    }, indent=2))
     log_event(log, "transform_done", raw=len(raw), clean=len(boots), issues=len(rejected),
               images=sum(len(b.images) for b in boots), chunks=len(chunks),
               ms=round((time.perf_counter() - t0) * 1000))

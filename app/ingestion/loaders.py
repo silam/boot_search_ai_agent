@@ -13,11 +13,19 @@ from __future__ import annotations
 
 import csv
 import json
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod # Abstract base class and abstract method decorator for loaders.
 from pathlib import Path
 from typing import Any
 
-
+# Base class for all loaders. Defines the interface that all loaders must implement.
+# This class cannot be instantiated directly. Subclasses must implement the `load` method.
+# Example usage:
+# loader = JsonCatalogLoader(Path("catalog.json"))
+# products = loader.load()
+# ABC: Abstract Base Class for loaders.
+# ABC is a helper class used to define abstract base classes.
+# abstractmethod: Decorator indicating that a method must be implemented by subclasses.
+# A class inheriting from ABC cannot be instantiated unless all its abstract methods are implemented. 
 class BaseLoader(ABC):
     @abstractmethod   # Must be implemented by all subclasses to load product records.
     def load(self) -> list[dict[str, Any]]:
@@ -105,3 +113,4 @@ def loader_for(path_or_url: str | Path) -> BaseLoader:
     if s.endswith(".csv"):
         return CsvCatalogLoader(Path(s))
     return JsonCatalogLoader(Path(s))
+    

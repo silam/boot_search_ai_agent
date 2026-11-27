@@ -83,7 +83,11 @@ def to_price(v: Any) -> float | None:
 # - A string representing the view, or "unknown" if it cannot be determined.
 _VIEW_FROM_NAME = re.compile(r"^\d+[_-](.+)$")
 
-
+# Determine the view from the image file path.
+# Parameters:
+# - path: The path to the image file.
+# Returns:
+# - A string representing the view, or "unknown" if it cannot be determined.
 def view_from_path(path: str) -> str:
     stem = PurePosixPath(path).stem.lower()
     m = _VIEW_FROM_NAME.match(stem)
@@ -110,7 +114,11 @@ def normalise_images(rec: dict[str, Any]) -> tuple[list[dict[str, str]], list[st
         images.append({"path": path, "view": str(view).strip().lower()})
     return images, problems
 
-
+# Normalise a single raw boot record into a consistent format suitable for validation and ingestion.
+# Parameters:
+# - raw: A dictionary representing a raw boot record.
+# Returns:
+# - A dictionary representing the cleaned and normalised boot record.
 def normalise_record(raw: dict[str, Any]) -> dict[str, Any]:
     rec = dict(raw)
     for key in ("name", "brand", "material", "description"):
@@ -142,12 +150,14 @@ def clean_catalog(raw_records: list[dict[str, Any]], image_root: Path | None = N
     boots: list[Boot] = []
     rejected: list[dict[str, str]] = []
     seen: set[str] = set()
+
     for raw in raw_records:
         rid = str(raw.get("id", "?"))
         if rid in seen:
             rejected.append({"id": rid, "kind": "record", "reason": "duplicate id"})
             continue
         _, image_problems = normalise_images(raw)
+
         try:
             boot = Boot(**normalise_record(raw))
         except ValidationError as e:
@@ -160,4 +170,5 @@ def clean_catalog(raw_records: list[dict[str, Any]], image_root: Path | None = N
             boot.images = [im for im in boot.images if im not in missing]
         seen.add(boot.id)
         boots.append(boot)
+
     return boots, rejected
